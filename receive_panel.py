@@ -158,7 +158,7 @@ class ReceivePanel(QWidget):
             return
         doc = self._text_edit.document()
         fmt = QTextCharFormat()
-        fmt.setBackground(QColor("#fe8019"))
+        fmt.setBackground(QColor("#ffc880"))
         fmt.setForeground(QColor("#1e1e2e"))
         cursor = QTextCursor(doc)
         while True:
@@ -177,8 +177,8 @@ class ReceivePanel(QWidget):
         current_sels = []
         if 0 <= self._search_index < len(self._search_sels):
             cur_fmt = QTextCharFormat()
-            cur_fmt.setBackground(QColor("#d65d0e"))
-            cur_fmt.setForeground(QColor("#fbf1c7"))
+            cur_fmt.setBackground(QColor("#fe8019"))
+            cur_fmt.setForeground(QColor("#1e1e2e"))
             cur_sel        = QTextEdit.ExtraSelection()
             cur_sel.cursor = self._search_sels[self._search_index].cursor
             cur_sel.format  = cur_fmt

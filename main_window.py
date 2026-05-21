@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QSplitter, QVBoxLayout, QHBoxLayout,
     QLabel, QGroupBox, QListWidget, QListWidgetItem,
-    QPushButton, QInputDialog, QMessageBox, QStatusBar
+    QPushButton, QInputDialog, QMessageBox, QStatusBar, QAbstractItemView
 )
 from PyQt6.QtCore import Qt, pyqtSlot, QByteArray
 from PyQt6.QtGui import QAction, QKeySequence
@@ -76,6 +76,7 @@ class MainWindow(QMainWindow):
         self._hl_list = QListWidget()
         self._hl_list.setMaximumHeight(160)
         self._hl_list.setToolTip("双击条目可删除")
+        self._hl_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
 
         add_btn = QPushButton("+ 添加关键词")
         hint    = QLabel("双击列表条目可删除")
