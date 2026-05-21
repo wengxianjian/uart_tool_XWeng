@@ -34,7 +34,7 @@ class ReceivePanel(QWidget):
         self._search_index        = -1
         self._auto_scroll         = True
         self._display_mode        = "ASCII"
-        self._timestamp_enabled   = True
+        self._timestamp_enabled   = False
         self._byte_buffer         = bytearray()
         self._init_ui()
 
@@ -67,7 +67,7 @@ class ReceivePanel(QWidget):
         self._mode_combo.setFixedWidth(70)
 
         self._ts_checkbox   = QCheckBox("时间戳")
-        self._ts_checkbox.setChecked(True)
+        self._ts_checkbox.setChecked(False)
         self._autoscroll_cb = QCheckBox("自动滚动")
         self._autoscroll_cb.setChecked(True)
 

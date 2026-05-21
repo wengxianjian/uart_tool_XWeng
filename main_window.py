@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QInputDialog, QMessageBox, QStatusBar
 )
 from PyQt6.QtCore import Qt, pyqtSlot, QByteArray
-from PyQt6.QtGui import QColor, QAction, QKeySequence
+from PyQt6.QtGui import QAction, QKeySequence
 
 from serial_manager   import SerialManager, SerialConfig
 from serial_worker    import SerialWorker
@@ -206,8 +206,6 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "提示", f"关键词 '{text.strip()}' 已存在")
             return
         item = QListWidgetItem(f"  {rule.keyword}")
-        item.setBackground(QColor(rule.color))
-        item.setForeground(QColor("#1e1e2e"))
         item.setData(Qt.ItemDataRole.UserRole, rule.keyword)
         self._hl_list.addItem(item)
         self._receive_panel.refresh_resident_highlights()
@@ -248,8 +246,6 @@ class MainWindow(QMainWindow):
             if rule:
                 rule.color = r["color"]
                 item = QListWidgetItem(f"  {rule.keyword}")
-                item.setBackground(QColor(rule.color))
-                item.setForeground(QColor("#1e1e2e"))
                 item.setData(Qt.ItemDataRole.UserRole, rule.keyword)
                 self._hl_list.addItem(item)
 

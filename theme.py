@@ -252,7 +252,8 @@ def _build_stylesheet() -> str:
             border-radius: 3px;
         }}
         QListWidget::item:selected {{
-            background-color: {COLOR_HIGHLIGHT_BG};
+            background-color: {COLOR_ACCENT};
+            color: {COLOR_BG_DARK};
         }}
         QToolTip {{
             background-color: {COLOR_BG_PANEL};
