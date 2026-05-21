@@ -125,21 +125,18 @@ class ReceivePanel(QWidget):
         return bar
 
     def append_data(self, raw: bytes) -> None:
-        ts = datetime.now().strftime("[%H:%M:%S.%f")[:-3] + "] "
+        ts = datetime.now().strftime("[%H:%M:%S.%f")[:-3] + "] " if self._timestamp_enabled else ""
 
         if self._display_mode == "HEX":
-            hex_str = " ".join(f"{b:02X}" for b in raw)
-            line = (ts if self._timestamp_enabled else "") + hex_str
-            self._append_line(line)
+            self._append_line(ts + " ".join(f"{b:02X}" for b in raw))
         else:
             self._byte_buffer.extend(raw)
             while b"\n" in self._byte_buffer:
                 idx        = self._byte_buffer.index(b"\n")
                 line_bytes = self._byte_buffer[:idx]
-                self._byte_buffer = self._byte_buffer[idx + 1:]
+                del self._byte_buffer[:idx + 1]
                 decoded = line_bytes.decode("utf-8", errors="replace").rstrip("\r")
-                line = (ts if self._timestamp_enabled else "") + decoded
-                self._append_line(line)
+                self._append_line(ts + decoded)
 
     def _append_line(self, text: str) -> None:
         self._text_edit.append(text)
@@ -195,21 +192,19 @@ class ReceivePanel(QWidget):
             self._text_edit.setTextCursor(cursor)
             self._text_edit.ensureCursorVisible()
 
-    def _search_next(self) -> None:
+    def _search_step(self, delta: int) -> None:
         if not self._search_sels:
             return
-        self._search_index = (self._search_index + 1) % len(self._search_sels)
+        self._search_index = (self._search_index + delta) % len(self._search_sels)
         self._refresh_highlights()
         self._jump_to_current()
         self._update_count_label()
 
+    def _search_next(self) -> None:
+        self._search_step(+1)
+
     def _search_prev(self) -> None:
-        if not self._search_sels:
-            return
-        self._search_index = (self._search_index - 1) % len(self._search_sels)
-        self._refresh_highlights()
-        self._jump_to_current()
-        self._update_count_label()
+        self._search_step(-1)
 
     def _update_count_label(self) -> None:
         total = len(self._search_sels)

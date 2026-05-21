@@ -41,11 +41,23 @@ python _smoke.py
 
 **数据流（发送）**：`SendPanel.send_requested(bytes)` → `MainWindow._on_send` → `SerialManager.send`。
 
+**断开连接的三个来源**，统一汇入 `MainWindow._on_disconnect()`：用户点击"关闭串口"、`SerialWorker` 检测到串口异常（`error_occurred` + `disconnected` 信号）、窗口关闭（`closeEvent`）。
+
+**循环发送**：`SendPanel` 内置 `QTimer`（`_loop_timer`），勾选"循环发送"后按间隔反复调用 `_do_send()`；HEX 格式解析失败会弹 `QMessageBox` 并自动取消循环（`_loop_checkbox.setChecked(False)`）。
+
 **显示模式差异**（`ReceivePanel.append_data`）：HEX 模式按数据块逐条输出；ASCII 模式用 `_byte_buffer` 累积字节、按 `\n` 切行后再输出——切换模式会清空该缓冲区。
 
 **高亮机制**：`HighlightManager` 持有常驻关键词规则并生成 `QTextEdit.ExtraSelection`。`ReceivePanel._refresh_highlights()` 把三类选区叠加渲染：常驻高亮 + 搜索匹配 + 当前搜索项。每次追加新行都会重建高亮。
 
 **持久化**：`AppSettings`（`settings.py`）通过 `QSettings` 存储（Windows 上即注册表，组织 `DIY` / 应用 `UartTool`）。保存串口配置、高亮规则、窗口几何与分隔条状态。复杂对象以 JSON 字符串存入。
+
+## 扩展指引
+
+新增功能时遵循既有模式：
+
+1. 在面板上定义 `pyqtSignal`，在 `MainWindow._connect_signals()` 接到槽——面板发信号，`MainWindow` 编排，面板之间零耦合。
+2. 读串口的逻辑放进 `SerialWorker` 线程；写串口走 `SerialManager`（主线程）。
+3. 需要持久化的状态，加到 `AppSettings` 并在 `_restore_settings()` / `closeEvent()` 中读写。
 
 ## 注意事项
 

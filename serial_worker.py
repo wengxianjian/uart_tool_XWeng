@@ -27,6 +27,7 @@ class SerialWorker(QThread):
                 break
             except Exception as e:
                 self.error_occurred.emit(str(e))
+                self.disconnected.emit()
                 break
 
     def stop(self) -> None:

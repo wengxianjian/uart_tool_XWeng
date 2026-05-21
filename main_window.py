@@ -197,6 +197,11 @@ class MainWindow(QMainWindow):
         label = "退出全屏日志 (F11)" if is_focus else "全屏日志模式 (F11)"
         self._focus_action.setText(label)
 
+    def _add_hl_list_item(self, keyword: str) -> None:
+        item = QListWidgetItem(f"  {keyword}")
+        item.setData(Qt.ItemDataRole.UserRole, keyword)
+        self._hl_list.addItem(item)
+
     def _add_highlight_keyword(self) -> None:
         text, ok = QInputDialog.getText(self, "添加常驻高亮关键词", "关键词:")
         if not ok or not text.strip():
@@ -205,9 +210,7 @@ class MainWindow(QMainWindow):
         if rule is None:
             QMessageBox.information(self, "提示", f"关键词 '{text.strip()}' 已存在")
             return
-        item = QListWidgetItem(f"  {rule.keyword}")
-        item.setData(Qt.ItemDataRole.UserRole, rule.keyword)
-        self._hl_list.addItem(item)
+        self._add_hl_list_item(rule.keyword)
         self._receive_panel.refresh_resident_highlights()
         self._save_highlight_rules()
 
@@ -245,9 +248,7 @@ class MainWindow(QMainWindow):
             rule = self._hm.add_keyword(r["keyword"])
             if rule:
                 rule.color = r["color"]
-                item = QListWidgetItem(f"  {rule.keyword}")
-                item.setData(Qt.ItemDataRole.UserRole, rule.keyword)
-                self._hl_list.addItem(item)
+                self._add_hl_list_item(rule.keyword)
 
     def _show_about(self) -> None:
         QMessageBox.information(

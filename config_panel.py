@@ -84,6 +84,15 @@ class ConfigPanel(QWidget):
         text = self._baud_combo.currentText()
         return text if text != self.CUSTOM_ITEM else "115200"
 
+    def _set_baudrate(self, baud: str) -> None:
+        pos = self._baud_combo.findText(baud)
+        if pos >= 0:
+            self._baud_combo.setCurrentIndex(pos)
+        else:
+            insert_at = self._baud_combo.count() - 1   # 插到"自定义..."前
+            self._baud_combo.insertItem(insert_at, baud)
+            self._baud_combo.setCurrentIndex(insert_at)
+
     def _on_baud_changed(self, index: int) -> None:
         if self._baud_combo.currentText() != self.CUSTOM_ITEM:
             return
@@ -92,14 +101,7 @@ class ConfigPanel(QWidget):
             115200, 300, 10_000_000
         )
         if ok:
-            custom = str(value)
-            pos = self._baud_combo.findText(custom)
-            if pos >= 0:
-                self._baud_combo.setCurrentIndex(pos)
-            else:
-                insert_at = self._baud_combo.count() - 1   # 插到"自定义..."前
-                self._baud_combo.insertItem(insert_at, custom)
-                self._baud_combo.setCurrentIndex(insert_at)
+            self._set_baudrate(str(value))
         else:
             self._baud_combo.setCurrentText("115200")
 
@@ -152,14 +154,7 @@ class ConfigPanel(QWidget):
 
     def restore_config_dict(self, cfg: dict) -> None:
         if cfg.get("baudrate"):
-            baud = cfg["baudrate"]
-            pos  = self._baud_combo.findText(baud)
-            if pos >= 0:
-                self._baud_combo.setCurrentIndex(pos)
-            else:
-                insert_at = self._baud_combo.count() - 1
-                self._baud_combo.insertItem(insert_at, baud)
-                self._baud_combo.setCurrentIndex(insert_at)
+            self._set_baudrate(cfg["baudrate"])
         if cfg.get("bytesize"):
             self._data_combo.setCurrentText(cfg["bytesize"])
         if cfg.get("parity"):
