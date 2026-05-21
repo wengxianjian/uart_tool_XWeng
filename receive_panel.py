@@ -158,7 +158,7 @@ class ReceivePanel(QWidget):
             return
         doc = self._text_edit.document()
         fmt = QTextCharFormat()
-        fmt.setBackground(QColor("#ffc880"))
+        fmt.setBackground(QColor("#ffb347"))
         fmt.setForeground(QColor("#1e1e2e"))
         cursor = QTextCursor(doc)
         while True:
@@ -175,20 +175,23 @@ class ReceivePanel(QWidget):
         resident = self._hm.build_extra_selections(doc)
 
         current_sels = []
+        other_sels = list(self._search_sels)
         if 0 <= self._search_index < len(self._search_sels):
+            other_sels = [s for i, s in enumerate(self._search_sels) if i != self._search_index]
             cur_fmt = QTextCharFormat()
             cur_fmt.setBackground(QColor("#fe8019"))
-            cur_fmt.setForeground(QColor("#1e1e2e"))
+            cur_fmt.setForeground(QColor("#ffffff"))
             cur_sel        = QTextEdit.ExtraSelection()
             cur_sel.cursor = self._search_sels[self._search_index].cursor
             cur_sel.format  = cur_fmt
             current_sels   = [cur_sel]
 
-        self._text_edit.setExtraSelections(resident + self._search_sels + current_sels)
+        self._text_edit.setExtraSelections(resident + other_sels + current_sels)
 
     def _jump_to_current(self) -> None:
         if 0 <= self._search_index < len(self._search_sels):
-            cursor = self._search_sels[self._search_index].cursor
+            cursor = QTextCursor(self._search_sels[self._search_index].cursor)
+            cursor.clearSelection()  # 避免原生蓝色选中背景覆盖 ExtraSelection 橙色
             self._text_edit.setTextCursor(cursor)
             self._text_edit.ensureCursorVisible()
 
