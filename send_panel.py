@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QTextEdit, QLabel, QCheckBox, QSpinBox, QComboBox, QMessageBox, QGroupBox
+    QTextEdit, QLabel, QCheckBox, QLineEdit, QComboBox, QMessageBox, QGroupBox
 )
-from PyQt6.QtCore import QTimer, pyqtSignal
+from PyQt6.QtCore import QTimer, pyqtSignal, Qt
+from PyQt6.QtGui import QIntValidator
 
 
 class SendPanel(QWidget):
@@ -46,15 +47,16 @@ class SendPanel(QWidget):
         self._send_btn      = QPushButton("发送")
         self._send_btn.setMinimumWidth(60)
         self._loop_checkbox = QCheckBox("循环发送")
-        self._interval_spin = QSpinBox()
-        self._interval_spin.setRange(10, 99999)
-        self._interval_spin.setValue(1000)
-        self._interval_spin.setSuffix(" ms")
-        self._interval_spin.setFixedWidth(90)
+        self._interval_edit = QLineEdit("1000")
+        self._interval_edit.setValidator(QIntValidator(10, 99999))
+        self._interval_edit.setFixedWidth(60)
+        self._interval_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._interval_label = QLabel("ms")
         btn_bar.addWidget(self._send_btn)
         btn_bar.addStretch()
         btn_bar.addWidget(self._loop_checkbox)
-        btn_bar.addWidget(self._interval_spin)
+        btn_bar.addWidget(self._interval_edit)
+        btn_bar.addWidget(self._interval_label)
 
         layout.addLayout(fmt_bar)
         layout.addWidget(self._input)
@@ -66,9 +68,7 @@ class SendPanel(QWidget):
 
         self._send_btn.clicked.connect(self._on_send_clicked)
         self._loop_checkbox.toggled.connect(self._on_loop_toggled)
-        self._interval_spin.valueChanged.connect(
-            lambda v: self._loop_timer.setInterval(v)
-        )
+        self._interval_edit.textChanged.connect(self._on_interval_changed)
 
         self.set_enabled(False)
 
@@ -77,11 +77,21 @@ class SendPanel(QWidget):
 
     def _on_loop_toggled(self, checked: bool) -> None:
         if checked:
-            self._loop_timer.start(self._interval_spin.value())
+            self._start_loop()
             self._send_btn.setEnabled(False)
         else:
             self._loop_timer.stop()
             self._send_btn.setEnabled(True)
+
+    def _on_interval_changed(self) -> None:
+        text = self._interval_edit.text()
+        if text.isdigit():
+            self._loop_timer.setInterval(int(text))
+
+    def _start_loop(self) -> None:
+        text = self._interval_edit.text()
+        if text.isdigit():
+            self._loop_timer.start(int(text))
 
     def _do_send(self) -> None:
         text = self._input.toPlainText()
