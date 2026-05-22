@@ -36,6 +36,8 @@ class ReceivePanel(QWidget):
         self._display_mode        = "ASCII"
         self._timestamp_enabled   = False
         self._byte_buffer         = bytearray()
+        self._paused              = False
+        self._pause_buffer        = bytearray()
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -62,6 +64,7 @@ class ReceivePanel(QWidget):
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(8)
 
+        self._mode_label    = QLabel("显示:")
         self._mode_combo    = QComboBox()
         self._mode_combo.addItems(["ASCII", "HEX"])
         self._mode_combo.setFixedWidth(70)
@@ -71,23 +74,31 @@ class ReceivePanel(QWidget):
         self._autoscroll_cb = QCheckBox("自动滚动")
         self._autoscroll_cb.setChecked(True)
 
+        self._pause_btn = QPushButton("暂停")
+        self._pause_btn.setFixedWidth(50)
+        self._pause_btn.setToolTip("暂停/继续接收区显示")
         self._clear_btn = QPushButton("清空")
         self._clear_btn.setFixedWidth(50)
         self._save_btn  = QPushButton("保存日志")
 
-        h.addWidget(QLabel("显示:"))
+        h.addWidget(self._mode_label)
         h.addWidget(self._mode_combo)
         h.addWidget(self._ts_checkbox)
         h.addWidget(self._autoscroll_cb)
         h.addStretch()
+        h.addWidget(self._pause_btn)
         h.addWidget(self._clear_btn)
         h.addWidget(self._save_btn)
 
         self._mode_combo.currentTextChanged.connect(self._on_mode_changed)
         self._ts_checkbox.toggled.connect(lambda v: setattr(self, "_timestamp_enabled", v))
         self._autoscroll_cb.toggled.connect(lambda v: setattr(self, "_auto_scroll", v))
+        self._pause_btn.clicked.connect(self._toggle_pause)
         self._clear_btn.clicked.connect(self.clear)
         self._save_btn.clicked.connect(self.save_log_dialog)
+
+        self._toolbar_layout  = h
+        self._pause_btn_index = h.indexOf(self._pause_btn)
 
         return bar
 
@@ -122,9 +133,14 @@ class ReceivePanel(QWidget):
         self._prev_btn.clicked.connect(self._search_prev)
         self._next_btn.clicked.connect(self._search_next)
 
+        self._search_layout = h
         return bar
 
     def append_data(self, raw: bytes) -> None:
+        if self._paused:
+            self._pause_buffer.extend(raw)
+            return
+
         ts = datetime.now().strftime("[%H:%M:%S.%f")[:-3] + "] " if self._timestamp_enabled else ""
 
         if self._display_mode == "HEX":
@@ -220,6 +236,7 @@ class ReceivePanel(QWidget):
     def clear(self) -> None:
         self._text_edit.clear()
         self._byte_buffer.clear()
+        self._pause_buffer.clear()
         self._search_sels  = []
         self._search_index = -1
         self._update_count_label()
@@ -232,7 +249,25 @@ class ReceivePanel(QWidget):
             with open(path, "w", encoding="utf-8") as f:
                 f.write(self._text_edit.toPlainText())
 
+    def _toggle_pause(self) -> None:
+        self._paused = not self._paused
+        if self._paused:
+            self._pause_btn.setText("继续")
+        else:
+            self._pause_btn.setText("暂停")
+            pending = bytes(self._pause_buffer)
+            self._pause_buffer.clear()
+            if pending:
+                self.append_data(pending)
+
     def set_toolbar_visible(self, visible: bool) -> None:
+        # 全屏日志模式下隐藏整条工具栏，并把暂停按钮移到搜索栏最右；恢复时移回
+        if visible:
+            self._search_layout.removeWidget(self._pause_btn)
+            self._toolbar_layout.insertWidget(self._pause_btn_index, self._pause_btn)
+        else:
+            self._toolbar_layout.removeWidget(self._pause_btn)
+            self._search_layout.addWidget(self._pause_btn)
         self._toolbar.setVisible(visible)
 
     def _on_mode_changed(self, mode: str) -> None:
