@@ -63,4 +63,4 @@ python _smoke.py
 
 - `main.py` 的 `_app_icon()` 用 `sys._MEIPASS` 兼容 PyInstaller 打包后的资源路径；`uart_tool.spec` 的 `datas` 必须同步包含图标文件。
 - 自定义波特率：`ConfigPanel` 的波特率下拉含「自定义...」项，选中会弹输入框并把新值插入到列表末项之前。
-- 全屏日志模式（F11）通过隐藏左侧面板、发送面板和接收区工具栏实现，状态由 `MainWindow._log_focus_mode` 跟踪。
+- 全屏日志模式（F11）通过隐藏左侧面板、发送面板、接收区工具栏与底部 statusBar 实现，状态由 `MainWindow._log_focus_mode` 跟踪。进入全屏时 `ReceivePanel.set_toolbar_visible(False, focus_left_widgets)` 会把暂停/清空按钮挪到搜索栏右侧，并把 `MainWindow` 传入的 `_status_port` / `_status_tx` / `_status_rx` 三个 label 插到搜索栏最左侧——让一行同时承担工具栏 + 状态栏。退出全屏时反向恢复（按钮回 toolbar、label 回 statusBar）。`_status_port` 的文本由 `MainWindow._update_status_port_label()` 统一渲染：全屏下只显示「已连接」，非全屏显示「已连接 端口 @ 波特率」，断开则显示「未连接」——`_on_connect` / `_on_disconnect` / `_toggle_log_focus` 都需调用它来同步。

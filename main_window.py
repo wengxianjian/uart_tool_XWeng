@@ -31,6 +31,8 @@ class MainWindow(QMainWindow):
         self._log_focus_mode = False
         self._rx_count       = 0
         self._tx_count       = 0
+        self._current_port   = ""
+        self._current_baud   = 0
 
         self._config_panel   = ConfigPanel(self)
         self._receive_panel  = ReceivePanel(self._hm, self)
@@ -151,9 +153,10 @@ class MainWindow(QMainWindow):
             self._tx_count = 0
             self._status_rx.setText("RX: 0 字节")
             self._status_tx.setText("TX: 0 字节")
-            self._status_port.setText(f"已连接  {config.port} @ {config.baudrate}")
+            self._current_port = config.port
+            self._current_baud = config.baudrate
             self._status_port.setObjectName("statusConnected")
-            self._status_port.setStyleSheet(f"color: {COLOR_SUCCESS}; font-weight: bold;")
+            self._update_status_port_label()
 
             self._settings.save_serial_config(self._config_panel.get_config_dict())
         except Exception as e:
@@ -167,8 +170,20 @@ class MainWindow(QMainWindow):
         self._serial_mgr.disconnect()
         self._config_panel.set_connected(False)
         self._send_panel.set_enabled(False)
-        self._status_port.setText("未连接")
-        self._status_port.setStyleSheet(f"color: {COLOR_TEXT_DIM};")
+        self._current_port = ""
+        self._current_baud = 0
+        self._update_status_port_label()
+
+    def _update_status_port_label(self) -> None:
+        if not self._serial_mgr.is_connected:
+            self._status_port.setText("未连接")
+            self._status_port.setStyleSheet(f"color: {COLOR_TEXT_DIM};")
+        elif self._log_focus_mode:
+            self._status_port.setText("已连接")
+            self._status_port.setStyleSheet(f"color: {COLOR_SUCCESS}; font-weight: bold;")
+        else:
+            self._status_port.setText(f"已连接  {self._current_port} @ {self._current_baud}")
+            self._status_port.setStyleSheet(f"color: {COLOR_SUCCESS}; font-weight: bold;")
 
     @pyqtSlot(bytes)
     def _on_data_received(self, data: bytes) -> None:
@@ -193,7 +208,25 @@ class MainWindow(QMainWindow):
 
         self._left_panel.setVisible(not is_focus)
         self._send_panel.setVisible(not is_focus)
-        self._receive_panel.set_toolbar_visible(not is_focus)
+
+        sb = self.statusBar()
+        focus_widgets = [self._status_port, self._status_tx, self._status_rx]
+        if is_focus:
+            # 把状态 label 从 statusBar 摘出来，交给搜索栏左侧
+            for w in focus_widgets:
+                sb.removeWidget(w)
+            self._receive_panel.set_toolbar_visible(False, focus_widgets)
+            sb.setVisible(False)
+        else:
+            self._receive_panel.set_toolbar_visible(True, focus_widgets)
+            # 放回 statusBar：港口左、TX/RX 永久区，保持原顺序
+            sb.addWidget(self._status_port)
+            sb.addPermanentWidget(self._status_tx)
+            sb.addPermanentWidget(self._status_rx)
+            for w in focus_widgets:
+                w.show()
+            sb.setVisible(True)
+        self._update_status_port_label()
 
         label = "退出全屏日志 (F11)" if is_focus else "全屏日志模式 (F11)"
         self._focus_action.setText(label)

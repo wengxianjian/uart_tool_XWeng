@@ -99,6 +99,7 @@ class ReceivePanel(QWidget):
 
         self._toolbar_layout  = h
         self._pause_btn_index = h.indexOf(self._pause_btn)
+        self._clear_btn_index = h.indexOf(self._clear_btn)
 
         return bar
 
@@ -260,14 +261,25 @@ class ReceivePanel(QWidget):
             if pending:
                 self.append_data(pending)
 
-    def set_toolbar_visible(self, visible: bool) -> None:
-        # 全屏日志模式下隐藏整条工具栏，并把暂停按钮移到搜索栏最右；恢复时移回
+    def set_toolbar_visible(self, visible: bool, focus_left_widgets: list | None = None) -> None:
+        # 全屏日志模式下隐藏整条工具栏，把暂停/清空按钮移到搜索栏右侧；
+        # 若提供 focus_left_widgets，则在进入全屏时把它们依序插到搜索栏最左
+        focus_left_widgets = focus_left_widgets or []
         if visible:
+            for w in focus_left_widgets:
+                self._search_layout.removeWidget(w)
+            self._search_layout.removeWidget(self._clear_btn)
             self._search_layout.removeWidget(self._pause_btn)
             self._toolbar_layout.insertWidget(self._pause_btn_index, self._pause_btn)
+            self._toolbar_layout.insertWidget(self._clear_btn_index, self._clear_btn)
         else:
             self._toolbar_layout.removeWidget(self._pause_btn)
+            self._toolbar_layout.removeWidget(self._clear_btn)
             self._search_layout.addWidget(self._pause_btn)
+            self._search_layout.addWidget(self._clear_btn)
+            for i, w in enumerate(focus_left_widgets):
+                self._search_layout.insertWidget(i, w)
+                w.show()
         self._toolbar.setVisible(visible)
 
     def _on_mode_changed(self, mode: str) -> None:
