@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QSplitter, QVBoxLayout, QHBoxLayout,
     QLabel, QGroupBox, QListWidget, QListWidgetItem,
-    QPushButton, QInputDialog, QMessageBox, QStatusBar, QAbstractItemView
+    QPushButton, QInputDialog, QMessageBox, QStatusBar, QAbstractItemView,
+    QSizePolicy
 )
 from PyQt6.QtCore import Qt, pyqtSlot, QByteArray
 from PyQt6.QtGui import QAction, QKeySequence
@@ -72,10 +73,12 @@ class MainWindow(QMainWindow):
 
     def _build_highlight_widget(self) -> QGroupBox:
         group  = QGroupBox("常驻高亮")
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         layout = QVBoxLayout(group)
         layout.setSpacing(4)
 
         self._hl_list = QListWidget()
+        self._hl_list.setMinimumHeight(120)
         self._hl_list.setMaximumHeight(160)
         self._hl_list.setToolTip("双击条目可删除")
         self._hl_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
