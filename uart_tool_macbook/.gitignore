@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# PyInstaller（保留 uart_tool.spec 作为源文件）
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Virtual env
+.venv/
+venv/
