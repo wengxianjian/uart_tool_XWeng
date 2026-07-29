@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QFileDialog
 )
 from PyQt6.QtGui import QTextCharFormat, QColor, QTextCursor, QFont
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from highlight_manager import HighlightManager
 
 
@@ -27,6 +27,8 @@ class ReceiveTextEdit(QTextEdit):
 
 
 class ReceivePanel(QWidget):
+    pause_toggled = pyqtSignal(bool)
+
     def __init__(self, highlight_manager: HighlightManager, parent=None):
         super().__init__(parent)
         self._hm                  = highlight_manager
@@ -36,6 +38,7 @@ class ReceivePanel(QWidget):
         self._display_mode        = "ASCII"
         self._timestamp_enabled   = False
         self._byte_buffer         = bytearray()
+        self._paused              = False
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -74,12 +77,15 @@ class ReceivePanel(QWidget):
         self._clear_btn = QPushButton("清空")
         self._clear_btn.setFixedWidth(50)
         self._save_btn  = QPushButton("保存日志")
+        self._pause_btn = QPushButton("暂停")
+        self._pause_btn.setFixedWidth(50)
 
         h.addWidget(QLabel("显示:"))
         h.addWidget(self._mode_combo)
         h.addWidget(self._ts_checkbox)
         h.addWidget(self._autoscroll_cb)
         h.addStretch()
+        h.addWidget(self._pause_btn)
         h.addWidget(self._clear_btn)
         h.addWidget(self._save_btn)
 
@@ -88,6 +94,7 @@ class ReceivePanel(QWidget):
         self._autoscroll_cb.toggled.connect(lambda v: setattr(self, "_auto_scroll", v))
         self._clear_btn.clicked.connect(self.clear)
         self._save_btn.clicked.connect(self.save_log_dialog)
+        self._pause_btn.clicked.connect(self._on_pause_toggled)
 
         return bar
 
@@ -236,6 +243,15 @@ class ReceivePanel(QWidget):
 
     def set_toolbar_visible(self, visible: bool) -> None:
         self._toolbar.setVisible(visible)
+
+    def _on_pause_toggled(self) -> None:
+        """切换暂停/继续状态"""
+        self._paused = not self._paused
+        if self._paused:
+            self._pause_btn.setText("继续")
+        else:
+            self._pause_btn.setText("暂停")
+        self.pause_toggled.emit(self._paused)
 
     def _on_mode_changed(self, mode: str) -> None:
         self._display_mode = mode

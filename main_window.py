@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QSplitter, QVBoxLayout, QHBoxLayout,
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QGroupBox, QListWidget, QListWidgetItem,
     QPushButton, QInputDialog, QMessageBox, QStatusBar
 )
@@ -29,6 +29,7 @@ class MainWindow(QMainWindow):
         self._log_mgr        = LogManager(self)
         self._settings       = AppSettings()
         self._log_focus_mode = False
+        self._rx_paused      = False
         self._rx_count       = 0
         self._tx_count       = 0
 
@@ -55,17 +56,12 @@ class MainWindow(QMainWindow):
         left_layout.setSpacing(6)
         left_layout.addWidget(self._config_panel)
         left_layout.addWidget(self._build_highlight_widget())
+        left_layout.addWidget(self._send_panel)
         left_layout.addStretch()
-        self._left_panel.setFixedWidth(280)
-
-        self._splitter = QSplitter(Qt.Orientation.Vertical)
-        self._splitter.addWidget(self._receive_panel)
-        self._splitter.addWidget(self._send_panel)
-        self._splitter.setStretchFactor(0, 7)
-        self._splitter.setStretchFactor(1, 3)
+        self._left_panel.setFixedWidth(300)
 
         main_h.addWidget(self._left_panel)
-        main_h.addWidget(self._splitter, stretch=1)
+        main_h.addWidget(self._receive_panel, stretch=1)
         self.setCentralWidget(central)
 
     def _build_highlight_widget(self) -> QGroupBox:
@@ -133,6 +129,7 @@ class MainWindow(QMainWindow):
         self._config_panel.disconnect_requested.connect(self._on_disconnect)
         self._config_panel.refresh_requested.connect(self._refresh_ports)
         self._send_panel.send_requested.connect(self._on_send)
+        self._receive_panel.pause_toggled.connect(self._on_pause_toggled)
 
     @pyqtSlot(SerialConfig)
     def _on_connect(self, config: SerialConfig) -> None:
@@ -171,10 +168,16 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(bytes)
     def _on_data_received(self, data: bytes) -> None:
+        if self._rx_paused:
+            return
         self._rx_count += len(data)
         self._status_rx.setText(f"RX: {self._rx_count} 字节")
         self._receive_panel.append_data(data)
         self._log_mgr.write_raw(data)
+
+    @pyqtSlot(bool)
+    def _on_pause_toggled(self, paused: bool) -> None:
+        self._rx_paused = paused
 
     @pyqtSlot(bytes)
     def _on_send(self, data: bytes) -> None:
@@ -232,10 +235,6 @@ class MainWindow(QMainWindow):
         if geo:
             self.restoreGeometry(QByteArray(geo))
 
-        splitter_state = self._settings.load_splitter_state()
-        if splitter_state:
-            self._splitter.restoreState(QByteArray(splitter_state))
-
         cfg = self._settings.load_serial_config()
         if cfg:
             self._config_panel.restore_config_dict(cfg)
@@ -266,6 +265,5 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         self._settings.save_geometry(bytes(self.saveGeometry()))
-        self._settings.save_splitter_state(bytes(self._splitter.saveState()))
         self._on_disconnect()
         event.accept()
