@@ -144,7 +144,8 @@ def _build_stylesheet() -> str:
             border: 1px solid {COLOR_TEXT_DIM};
             border-radius: 4px;
             color: {COLOR_TEXT_PRIMARY};
-            selection-background-color: {COLOR_HIGHLIGHT_BG};
+            selection-background-color: {COLOR_ACCENT};
+            selection-color: {COLOR_BG_DARK};
         }}
         QTextEdit:focus {{
             border-color: {COLOR_ACCENT};
