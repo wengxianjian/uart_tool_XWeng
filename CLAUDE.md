@@ -37,13 +37,13 @@ python _smoke.py
 - `SerialManager`（`serial_manager.py`）——同步封装 `serial.Serial`，负责 connect/disconnect/send 和端口扫描。`SerialConfig` 是配置 dataclass。
 - `SerialWorker`（`serial_worker.py`）——`QThread` 子类，独立线程中每 10ms 轮询 `in_waiting` 读取数据，通过 `data_received(bytes)` 信号把数据送回主线程。读串口必须在此线程，绝不能阻塞 GUI 线程。
 
-**数据流（接收）**：`SerialWorker.data_received` → `MainWindow._on_data_received` → `ReceivePanel.append_data`（显示）+ `LogManager.write_raw`。注意 `LogManager` 当前处于休眠状态——`write_raw` 已接入数据流，但 `start_auto_save()` / `save_text()` 从未被调用、也无 UI 开关，所以自动保存实际不会落盘。日志保存目前只走 `ReceivePanel.save_log_dialog`（Ctrl+S，直接写 `QTextEdit` 文本）。
+**数据流（接收）**：`SerialWorker.data_received` → `MainWindow._on_data_received` → 累加 `_rx_count` + `LogManager.write_raw`（自动落盘）→ 追加到 `_rx_pending` 缓存 → 50ms 定时器 `_flush_rx()` 分批交给 `ReceivePanel.append_data`（显示）。左侧栏「发送」模块下方的「自动落盘」开关决定是否落盘（`log/enabled` 持久化），目录可自定义（`log/directory`），留空用应用数据目录下的 `logs/uart_log_<时间戳>.txt`；分组框内的「打开目录」按钮（单独一行）可直接在资源管理器中打开当前落盘目录（`open_log_dir_requested` → `MainWindow._on_open_log_dir()`）；已连接时切换开关或改目录立即生效，断开时 `stop_auto_save()` 关闭文件。落盘发生在丢缓存之前，所以界面丢弃数据不影响日志完整性；日志文件是 UTF-8 文本（关闭换行转换），二进制数据会以替换字符体现。
 
 **数据流（发送）**：`SendPanel.send_requested(bytes)` → `MainWindow._on_send` → `SerialManager.send`。
 
-**显示模式差异**（`ReceivePanel.append_data`）：HEX 模式按数据块逐条输出；ASCII 模式用 `_byte_buffer` 累积字节、按 `\n` 切行后再输出——切换模式会清空该缓冲区。
+**显示模式差异**（`ReceivePanel.append_data`）：HEX 模式每 32 字节成一行；ASCII 模式用 `_byte_buffer` 累积字节、按 `\n` 切行后再输出——切换模式会清空该缓冲区。
 
-**高亮机制**：`HighlightManager` 持有常驻关键词规则并生成 `QTextEdit.ExtraSelection`。`ReceivePanel._refresh_highlights()` 把三类选区叠加渲染：常驻高亮 + 搜索匹配 + 当前搜索项。每次追加新行都会重建高亮。
+**高亮机制**：`HighlightManager.apply_highlights()` 只扫描本次新增区间，把常驻关键词高亮直接写入文档字符格式（独立 block 光标 + `beginEditBlock` 合并重排版）。`ReceivePanel._refresh_highlights()` 只用 `ExtraSelection` 渲染搜索匹配与当前搜索项。文档块数由 `MAX_BLOCKS` 封顶。
 
 **持久化**：`AppSettings`（`settings.py`）通过 `QSettings` 存储（Windows 上即注册表，组织 `DIY` / 应用 `UartTool`）。保存串口配置、高亮规则、窗口几何与分隔条状态。复杂对象以 JSON 字符串存入。
 

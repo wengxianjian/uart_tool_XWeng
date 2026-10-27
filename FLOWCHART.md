@@ -64,18 +64,19 @@ flowchart TD
     E ==跨线程信号==> H[MainWindow._on_data_received]
 
     subgraph 主线程 [GUI 主线程]
-        H --> I[累加 _rx_count<br/>更新状态栏 RX]
-        H --> J[ReceivePanel.append_data]
-        H --> K[LogManager.write_raw<br/>当前休眠不落盘]
+        H --> I0[_rx_pending 缓存<br/>超过上限丢弃最旧数据]
+        I0 --> I1[QTimer 50ms 合并刷新<br/>累加 _rx_count 更新 RX]
+        I1 --> J[ReceivePanel.append_data]
+        I1 --> K[LogManager.write_raw<br/>当前休眠不落盘]
         J --> L{显示模式?}
-        L -- HEX --> M[每块转 02X 十六进制<br/>逐条成行输出]
+        L -- HEX --> M[每 32 字节转 02X<br/>逐条成行输出]
         L -- ASCII --> N[字节存入 _byte_buffer]
         N --> O{缓冲区含 \\n?}
         O -- 是 --> P[按 \\n 切行<br/>utf-8 解码后输出]
         O -- 否 --> Q[等待更多数据]
-        M --> R[_append_line]
+        M --> R[_append_lines 批量写入]
         P --> R
-        R --> S[_refresh_highlights 重建高亮]
+        R --> S[HighlightManager.apply_highlights<br/>仅扫描新增区间并写入字符格式]
         S --> T{自动滚动?}
         T -- 是 --> U[滚动到底部]
     end
@@ -106,13 +107,12 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[搜索框文本变化] --> B[_build_search_selections<br/>查找全部匹配]
+    A[搜索框文本变化] --> B[_build_search_selections<br/>查找全部匹配<br/>上限 MAX_SEARCH_MATCHES]
     B --> C[_search_index 置 0]
     C --> D[_refresh_highlights]
-    D --> E[叠加三类高亮选区]
-    E --> E1[常驻关键词高亮]
-    E --> E2[搜索全部匹配]
-    E --> E3[当前选中匹配项]
+    D --> E[仅设置搜索相关 ExtraSelection]
+    E --> E1[搜索全部匹配]
+    E --> E2[当前选中匹配项]
     D --> F[_jump_to_current 跳转到当前项]
     F --> G[_update_count_label 更新 当前/总数]
 
@@ -121,8 +121,13 @@ flowchart TD
 
     J[添加/删除常驻关键词] --> K[HighlightManager 增删规则]
     K --> L[refresh_resident_highlights]
-    L --> D
+    L --> L1[clear_highlights 清除字符格式]
+    L1 --> L2[apply_highlights 全文档重刷<br/>独立 block 光标 + EditBlock]
+    L2 --> D
     K --> M[AppSettings.save_highlight_rules]
+
+    N[追加新文本 _append_lines] --> O[apply_highlights 只扫描新增区间<br/>直接写入字符格式]
+    O --> D
 ```
 
 ## 6. 信号与槽连接关系

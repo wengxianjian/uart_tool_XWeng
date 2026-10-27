@@ -22,7 +22,7 @@
 | 接收显示面板 | `receive_panel.py` | 接收区显示、ASCII/HEX 切换、时间戳、搜索、高亮叠加、日志保存 |
 | 发送面板 | `send_panel.py` | 发送数据输入、ASCII/HEX 编码、换行符附加、循环定时发送 |
 | 高亮管理 | `highlight_manager.py` | `HighlightManager` 维护常驻关键词规则，生成 `QTextEdit.ExtraSelection` |
-| 日志管理 | `log_manager.py` | `LogManager`，原始数据落盘能力（当前休眠，见下文 §6） |
+| 日志管理 | `log_manager.py` | `LogManager`，接收数据自动落盘（见下文 §6） |
 | 持久化 | `settings.py` | `AppSettings` 通过 `QSettings` 读写配置（Windows 上即注册表） |
 | 主题 | `theme.py` | 暗色样式表与配色常量 |
 
@@ -73,8 +73,9 @@
   → data_received(bytes) 信号                            [跨线程]
   → MainWindow._on_data_received()                       [主线程]
       ├→ 累加 _rx_count，更新状态栏
-      ├→ ReceivePanel.append_data()   显示
-      └→ LogManager.write_raw()       落盘（当前休眠）
+      ├→ LogManager.write_raw()       落盘（连接期间自动开启）
+      ├→ 追加到 _rx_pending 缓存（超限丢弃最旧数据）
+      └→ QTimer 50ms 分批 → ReceivePanel.append_data()   显示
 ```
 
 ### 5.2 发送数据流
@@ -121,10 +122,10 @@ ConfigPanel "打开串口"
 `SendPanel` 内置 `QTimer`，勾选"循环发送"后按间隔反复调用 `_do_send()`；HEX 格式错误会自动取消循环。
 
 ### 持久化
-`AppSettings` 经 `QSettings`（组织 `DIY` / 应用 `UartTool`，Windows 上即注册表）保存：串口配置、高亮规则、窗口几何、分隔条状态。复杂对象以 JSON 字符串存入。
+`AppSettings` 经 `QSettings`（组织 `DIY` / 应用 `UartTool`，Windows 上即注册表）保存：串口配置、高亮规则、窗口几何、分隔条状态、自动落盘开关与目录（`log/enabled`、`log/directory`）。复杂对象以 JSON 字符串存入。
 
-### LogManager 休眠状态
-`LogManager.write_raw()` 已接入接收数据流，但 `start_auto_save()` 从未被调用、也无 UI 开关，因此**自动保存实际不落盘**。当前日志保存只走 `ReceivePanel.save_log_dialog`（Ctrl+S，直接写 `QTextEdit` 文本）。
+### 自动落盘
+左侧栏「发送」模块下方有独立的「自动落盘」分组框，含开关和目录输入框（可点「…」弹出 `QFileDialog` 选择目录，下方一行的「打开目录」按钮直接在文件资源管理器中打开当前落盘目录，目录不存在时先创建）。开关与目录通过 `auto_log_toggled` / `log_dir_changed` 信号交给 `MainWindow`：已连接时切换开关立即启停落盘，修改目录立即在新目录新建文件；未连接时仅保存配置，连接时按开关状态决定是否落盘。目录留空则使用默认目录 `QStandardPaths.AppDataLocation/logs`（Windows 上为 `%APPDATA%\DIY\UartTool\logs`），文件名为 `uart_log_<时间戳>.txt`。`MainWindow._start_auto_log()` 调用 `LogManager.start_auto_save()`，断开时 `stop_auto_save()` 关闭文件。写盘发生在 `_on_data_received` 里、丢弃缓存之前，因此即使界面因数据过快丢弃了显示内容，磁盘记录仍完整。文件以 UTF-8 文本 + `newline=""` 打开，不做换行转换；二进制数据会以替换字符体现，需要逐字节精确时请用 HEX 显示后另存。
 
 ## 7. 扩展指引
 

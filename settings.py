@@ -29,6 +29,28 @@ class AppSettings:
         except Exception:
             return []
 
+    def save_log_config(self, enabled: bool, directory: str) -> None:
+        """保存自动落盘配置。
+
+        参数:
+            enabled: 自动落盘开关状态
+            directory: 用户指定的日志目录，空字符串表示使用默认目录
+        """
+        self._s.setValue("log/enabled", enabled)
+        self._s.setValue("log/directory", directory)
+
+    def load_log_config(self) -> dict:
+        """读取自动落盘配置。
+
+        返回:
+            字典 {"enabled": bool, "directory": str}，
+            未保存过时默认开启并使用默认目录
+        """
+        return {
+            "enabled":   self._s.value("log/enabled", True, type=bool),
+            "directory": self._s.value("log/directory", "", type=str) or "",
+        }
+
     def save_geometry(self, geometry: bytes) -> None:
         self._s.setValue("window/geometry", geometry)
 
